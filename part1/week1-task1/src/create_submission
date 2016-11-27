@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+target_bin="${DIR}/../bin/"
+target_file="${target_bin}/percolation.zip"
+rm -rf "${target_file}"
+zip "${target_file}" Percolation.java PercolationStats.java
+ls -la "${target_file}"
