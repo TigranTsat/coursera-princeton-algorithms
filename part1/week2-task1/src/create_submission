@@ -1,0 +1,21 @@
+#!/bin/bash -e
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+doAnalysis=true
+
+
+target_bin="${DIR}/../bin/"
+target_file="${target_bin}/queues.zip"
+rm -rf "${target_file}"
+javac-algs4 -d "${DIR}/../bin/" "${DIR}/"*.java
+echo "Compiled"
+(cd "${target_bin}" &&  echo AA AB AC AD AE AF AG AH AI | java-algs4  Subset 3 )
+echo "____________"
+if [ "${doAnalysis}" = true ]; then
+    findbugs-algs4 "${target_bin}"*.class
+    echo "____________"
+    checkstyle-algs4 "${DIR}/"*.java
+    echo "____________"
+fi
+zip "${target_file}" "${DIR}/Deque.java" "${DIR}/RandomizedQueue.java" "${DIR}/Subset.java"
+ls -la "${target_file}"
