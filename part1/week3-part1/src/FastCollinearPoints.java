@@ -32,6 +32,8 @@ public class FastCollinearPoints {
                 if (left >= sortedSlopes.length) {
                     break;
                 }
+                Point minP = baseP;
+                Point maxP = baseP;
                 double slope = baseP.slopeTo(sortedSlopes[left]);
                 for (right = left; right < sortedSlopes.length; right++) {
                     if (sortedSlopes[left] == baseP) {
@@ -44,6 +46,12 @@ public class FastCollinearPoints {
                     if (Double.compare(slope, slope2) != 0) {
                         break;
                     }
+                    if (minP.compareTo(sortedSlopes[right]) > 0) {
+                        minP = sortedSlopes[right];
+                    }
+                    if (maxP.compareTo(sortedSlopes[right]) < 0) {
+                        maxP = sortedSlopes[right];
+                    }
                 }
                 right--;
                 // we have a gap of index left and right - 1
@@ -51,20 +59,11 @@ public class FastCollinearPoints {
                 // right));
                 int collinearLen = right - left + 1 + 1;
                 if (collinearLen >= COLLINEAR_POINT_MIN) {
-                    Point[] collenearPoints = new Point[collinearLen];
-                    collenearPoints[0] = baseP;
-                    int collenearPointsP = 1;
-                    for (int k = left; k <= right; k++) {
-                        collenearPoints[collenearPointsP++] = sortedSlopes[k];
-                    }
-                    Arrays.sort(collenearPoints);
-                    Point minP = collenearPoints[0];
-                    Point maxP = collenearPoints[collinearLen - 1];
                     // System.out.println(String.format("Found collinear (%s, %s). Len = %s. %s - %s [%s]",
                     // left, right,
                     // collinearLen, minP, maxP,
                     // Arrays.toString(collenearPoints)));
-                    addSegmentIfnotExists(minP, maxP, foundSegments);
+                    addSegment(minP, maxP, foundSegments);
 
                 }
                 left = right;
@@ -74,33 +73,55 @@ public class FastCollinearPoints {
         lineSegmentsArr = pointHolderToLineSegment(foundSegments);
     }
 
-    private Point[] findMinMax(Point[] points, int right, int left) {
-
-    }
-
-    private void addSegmentIfnotExists(Point minP, Point maxP, ArrayList<PointHolder> foundSegments) {
+    private void addSegment(Point minP, Point maxP, ArrayList<PointHolder> foundSegments) {
         PointHolder newPh = new PointHolder(minP, maxP);
-        for (PointHolder ph : foundSegments) {
-            if (ph.equals(newPh)) {
-                // Duplicate found
-                return;
-            }
+        if (minP.compareTo(maxP) >= 0) {
+            throw new RuntimeException("Wrong");
         }
         foundSegments.add(newPh);
-        // System.out.println("Added: " + newPh);
     }
+
+    // private void addSegmentIfnotExists(Point minP, Point maxP,
+    // ArrayList<PointHolder> foundSegments) {
+    // PointHolder newPh = new PointHolder(minP, maxP);
+    // for (PointHolder ph : foundSegments) {
+    // if (ph.equals(newPh)) {
+    // // Duplicate found
+    // return;
+    // }
+    // }
+    // foundSegments.add(newPh);
+    // }
 
     // the number of line segments
     public int numberOfSegments() {
         return lineSegmentsArr.length;
     }
 
+    private boolean doesElementExist(PointHolder[] phArr, int i, PointHolder p) {
+        for (int j = 0; j < i; j++) {
+            if (phArr[j].equals(p)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // the line segments
     private LineSegment[] pointHolderToLineSegment(ArrayList<PointHolder> foundSegments) {
-        final LineSegment[] result = new LineSegment[foundSegments.size()];
+        final PointHolder[] phResult = new PointHolder[foundSegments.size()];
         int i = 0;
         for (PointHolder ph : foundSegments) {
-            result[i++] = ph.toLineSegment();
+            // check that not exist
+            boolean alreadyExist = doesElementExist(phResult, i, ph);
+            if (!alreadyExist) {
+                phResult[i] = ph;
+                i++;
+            } 
+        }
+        final LineSegment[] result = new LineSegment[i];
+        for (int j = 0; j < i; j++) {
+            result[j] = phResult[j].toLineSegment();
         }
         return result;
     }
@@ -112,6 +133,7 @@ public class FastCollinearPoints {
 
     // We need this, since LineSegment does not allow to get values
     private class PointHolder {
+
 
         private Point minP;
         private Point maxP;
@@ -164,5 +186,11 @@ public class FastCollinearPoints {
                 return false;
             return true;
         }
+
+        @Override
+        public String toString() {
+            return "PointHolder [minP=" + minP + ", maxP=" + maxP + "]";
+        }
+
     }
 }
