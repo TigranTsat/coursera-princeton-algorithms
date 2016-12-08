@@ -4,7 +4,6 @@ import java.util.Iterator;
 public class Board {
     private final int n;
     private int[][] blocks;
-    private int numberOfMoves = 0;
     private int zeroRow, zeroCol;
 
     // construct a board from an n-by-n array of blocks
@@ -55,7 +54,7 @@ public class Board {
                 }
             }
         }
-        return missCounter + this.numberOfMoves;
+        return missCounter;
     }
 
     // sum of Manhattan distances between blocks and goal
@@ -73,7 +72,7 @@ public class Board {
                 missCounter += cellManhattan;
             }
         }
-        return missCounter + this.numberOfMoves;
+        return missCounter;
     }
 
     // is this board the goal board?
@@ -187,6 +186,7 @@ public class Board {
                 bottomN.swap(bottomN.zeroRow, bottomN.zeroCol, bottomN.zeroRow, bottomN.zeroCol + 1);
                 boardNeighborsList.add(bottomN);
             }
+
         }
 
         @Override
@@ -219,7 +219,7 @@ public class Board {
     public static void main(String[] args) {
         runBoardBasicTests1();
         runBoardBasicTests2();
-        runBoardTestInterable();
+        runBoardTestInterable1();
     }
 
     private static void runBoardBasicTests1() {
@@ -273,7 +273,7 @@ public class Board {
         }
     }
 
-    private static void runBoardTestInterable() {
+    private static void runBoardTestInterable1() {
         final int[][] b1blocks = { { 8, 1, 3 }, { 4, 0, 2 }, { 7, 6, 5 } };
         Board b1 = new Board(b1blocks);
         if (b1.zeroCol != 1 || b1.zeroRow != 1) {
@@ -287,16 +287,45 @@ public class Board {
             throw new RuntimeException("Wrong b1neighbors: " + b1neighbors.toString());
         }
 
+        // =============
         final int[][] b1topNblocks = { { 8, 0, 3 }, { 4, 1, 2 }, { 7, 6, 5 } };
+        final int[][] b1leftNblocks = { { 8, 1, 3 }, { 0, 4, 2 }, { 7, 6, 5 } };
+        final int[][] b1rightNblocks = { { 8, 1, 3 }, { 4, 2, 0 }, { 7, 6, 5 } };
+        final int[][] b1bottomNblocks = { { 8, 1, 3 }, { 4, 6, 2 }, { 7, 0, 5 } };
+
         Board b1topN = new Board(b1topNblocks);
+        Board b1leftN = new Board(b1leftNblocks);
+        Board b1rightN = new Board(b1rightNblocks);
+        Board b1botomN = new Board(b1bottomNblocks);
         boolean b1topNFound = false;
+        boolean b1leftNFound = false;
+        boolean b1rightNFound = false;
+        boolean b1bottomNFound = false;
+
         for (Board b : b1neighbors) {
             if (b.equals(b1topN)) {
                 b1topNFound = true;
             }
-            // TODO: add validation for other positions
+            if (b.equals(b1leftN)) {
+                b1leftNFound = true;
+            }
+            if (b.equals(b1rightN)) {
+                b1rightNFound = true;
+            }
+            if (b.equals(b1botomN)) {
+                b1bottomNFound = true;
+            }
         }
         if (!b1topNFound) {
+            throw new RuntimeException("Validation failed");
+        }
+        if (!b1leftNFound) {
+            throw new RuntimeException("Validation failed");
+        }
+        if (!b1rightNFound) {
+            throw new RuntimeException("Validation failed");
+        }
+        if (!b1bottomNFound) {
             throw new RuntimeException("Validation failed");
         }
     }
