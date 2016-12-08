@@ -203,7 +203,10 @@ public class Board {
         final int maxDigit = n * n;
         final int nDigits = (int) (Math.log10(maxDigit) + 1);
         final int digitSpace = nDigits + 1;
-        StringBuilder result = new StringBuilder(maxDigit * digitSpace + n * ("\n".length() + 1));
+        StringBuilder result = new StringBuilder(maxDigit * digitSpace + n * ("\n".length() + 1) + 10);
+
+        result.append(n).append("\n");
+
         final String formatter = "%" + digitSpace + "d";
         for (int row = 0; row < n; row++) {
             for (int col = 0; col < n; col++) {
