@@ -97,9 +97,10 @@ public class Board {
         if (twin.blocks[0][0] != 0 && twin.blocks[0][1] != 0) {
             // use 0,0 <---> 0, 1
             twin.swap(0, 0, 0, 1);
-        } else {
+        } 
+        else {
             // use 1,0 <---> 1, 1
-            twin.swap(0, 0, 0, 1);
+            twin.swap(1, 0, 1, 1);
         }
         validateZero();
         return twin;
@@ -128,12 +129,12 @@ public class Board {
     // does this board equal y?
     public boolean equals(Object y) {
         if (y == null) {
-            throw new NullPointerException();
+            return false;
         }
         if (y == this) {
             return true;
         }
-        if (!(y instanceof Board)) {
+        if (!(y.getClass().equals(getClass()))) {
             return false;
         }
         Board b = (Board) y;

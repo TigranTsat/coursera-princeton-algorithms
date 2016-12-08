@@ -1,3 +1,4 @@
+package test;
 
 public class Week4IQ {
     public static void main(String[] args) {
