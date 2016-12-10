@@ -1,5 +1,4 @@
 import java.awt.Color;
-import java.awt.Point;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -8,6 +7,7 @@ import java.util.Queue;
 import edu.princeton.cs.algs4.Point2D;
 import edu.princeton.cs.algs4.RectHV;
 import edu.princeton.cs.algs4.StdDraw;
+import edu.princeton.cs.algs4.StdRandom;
 
 public class KdTree {
     private static final double DRAW_LINE_SIZE = 0.001;
@@ -125,15 +125,24 @@ public class KdTree {
 
     // does the set contain point p?
     public boolean contains(Point2D p) {
+        return contains(p, false);
+    }
+
+    private boolean contains(Point2D p, boolean printPath) {
 
         int level = 0;
         Node currentNode = rootNode;
         if (rootNode == null) {
             return false;
         }
+
+        Boolean lastActionLeft = null; // used for printing
         while (true) {
             if (currentNode == null) {
                 return false;
+            }
+            if (printPath) {
+                System.out.println("prev. left ? " + lastActionLeft + " ---> " + currentNode);
             }
             if (level % 2 == 0) {
                 // compare by x
@@ -143,9 +152,11 @@ public class KdTree {
                 double x = currentNode.point.x();
                 if (p.x() < x) {
                     currentNode = currentNode.left;
+                    lastActionLeft = true;
                 } 
                 else {
                     currentNode = currentNode.right;
+                    lastActionLeft = false;
                 }
             } 
             else {
@@ -156,9 +167,11 @@ public class KdTree {
                 double y = currentNode.point.y();
                 if (p.y() < y) {
                     currentNode = currentNode.left;
+                    lastActionLeft = true;
                 } 
                 else {
                     currentNode = currentNode.right;
+                    lastActionLeft = false;
                 }
             }
             level++;
@@ -366,7 +379,7 @@ public class KdTree {
             // y compare
             if (targetpY < p.y()) {
                 smallestLeft = nearest(n.left, targetP, xMin, xMax, yMin, p.y());
-                RectHV rect = new RectHV(xMin, p.y(), xMin, yMax);
+                RectHV rect = new RectHV(xMin, p.y(), xMax, yMax);
                 if (smallestLeft != null && rect.distanceTo(targetP) > smallestLeft.distanceTo(targetP)) {
                     // no op
                 } 
@@ -376,7 +389,7 @@ public class KdTree {
             } 
             else {
                 smallestRight = nearest(n.right, targetP, xMin, xMax, p.y(), yMax);
-                RectHV rect = new RectHV(xMin, yMin, xMin, p.y());
+                RectHV rect = new RectHV(xMin, yMin, xMax, p.y());
                 if (smallestRight != null && rect.distanceTo(targetP) > smallestRight.distanceTo(targetP)) {
                     // no op
                 } else {
@@ -522,7 +535,168 @@ public class KdTree {
     public static void main(String[] args) {
         runTests01();
         runTest02Nearest();
+        runTest02NearestRandFixed();
+        runTest03NearestRandFixed();
+        runTest08NearestRandom();
         System.out.println("Tests completed for KdTree");
+    }
+
+    private static void runTest08NearestRandom() {
+        final int gridLen = 100;
+        final int nOfPoints = 30;
+        int numberOfTrials = 1000;
+
+        ArrayList<Point2D> points = new ArrayList<Point2D>(nOfPoints);
+        for (int i = 0; i < nOfPoints; i++) {
+            points.add(getRandomGridPoint2D(gridLen));
+        }
+
+        KdTree kdTree = new KdTree();
+        PointSET pSet = new PointSET();
+        for (Point2D p : points) {
+            kdTree.insert(p);
+            pSet.insert(p);
+        }
+
+        if (kdTree.size() != pSet.size()) {
+            throw new RuntimeException("Validation failed");
+        }
+        
+       
+        for (int i = 0; i < numberOfTrials; i++) {
+            Point2D randPoint = getRandomGridPoint2D(gridLen);
+            Point2D nearestTree = kdTree.nearest(randPoint);
+            Point2D nearestSet = pSet.nearest(randPoint);
+            if (!nearestSet.equals(nearestTree)) {
+                double distanceTree = randPoint.distanceTo(nearestTree);
+                double distanceSet = randPoint.distanceTo(nearestSet);
+                if (Double.compare(distanceSet, distanceTree) == 0) {
+                    System.err.println("Found multiple points with similar distance");
+                    continue;
+                }
+                final String errorStr = "Validation failed for point: " + randPoint + " on trial " + i + ". Tree: "
+                        + nearestTree + "; Set: " + nearestSet + " . Tree distance = " + distanceTree
+                        + "; Set distance = " + distanceSet;
+                System.err.println(errorStr);
+                System.out.println(getInsertCodeFromPoints(points));
+                throw new RuntimeException(errorStr);
+            }
+        }
+    }
+
+    private static String getInsertCodeFromPoints(ArrayList<Point2D> points) {
+        StringBuilder strBld = new StringBuilder();
+        for (Point2D p : points) {
+            strBld.append(String.format("kdTree05.insert(new Point2D(%s, %s));", p.x(), p.y()));
+            strBld.append("\n");
+        }
+        return strBld.toString();
+    }
+
+    private static Point2D getRandomGridPoint2D(int gridLen) {
+        double x = (double) StdRandom.uniform(0, gridLen) / gridLen;
+        double y = (double) StdRandom.uniform(0, gridLen) / gridLen;
+        return new Point2D(x, y);
+    }
+
+    private static void runTest03NearestRandFixed() {
+        // Validation failed for point: (0.44, 0.41) on trial 657. Tree: (0.61,
+        // 0.91); Set: (0.61, 0.42) . Tree distance = 0.5281098370604357; Set
+        // distance = 0.170293863659264
+
+        KdTree kdTree05 = new KdTree();
+        kdTree05.insert(new Point2D(0.61, 0.91));
+        kdTree05.insert(new Point2D(0.83, 0.96));
+        kdTree05.insert(new Point2D(0.97, 0.59));
+        kdTree05.insert(new Point2D(0.83, 0.42));
+        kdTree05.insert(new Point2D(0.43, 0.58));
+        kdTree05.insert(new Point2D(0.3, 0.08));
+        kdTree05.insert(new Point2D(0.61, 0.42));
+        kdTree05.insert(new Point2D(0.45, 0.15));
+        kdTree05.insert(new Point2D(0.88, 0.47));
+        kdTree05.insert(new Point2D(0.96, 0.35));
+        kdTree05.insert(new Point2D(0.96, 0.45));
+        kdTree05.insert(new Point2D(0.29, 0.5));
+        kdTree05.insert(new Point2D(0.18, 0.86));
+        kdTree05.insert(new Point2D(0.78, 0.36));
+        kdTree05.insert(new Point2D(0.5, 0.89));
+        kdTree05.insert(new Point2D(0.15, 0.31));
+        kdTree05.insert(new Point2D(0.48, 0.58));
+        kdTree05.insert(new Point2D(0.06, 0.72));
+        kdTree05.insert(new Point2D(0.93, 0.04));
+        kdTree05.insert(new Point2D(0.79, 0.02));
+        kdTree05.insert(new Point2D(0.44, 0.62));
+        kdTree05.insert(new Point2D(0.84, 0.86));
+        kdTree05.insert(new Point2D(0.12, 0.98));
+        kdTree05.insert(new Point2D(0.1, 0.93));
+        kdTree05.insert(new Point2D(0.22, 0.29));
+        kdTree05.insert(new Point2D(0.86, 0.35));
+        kdTree05.insert(new Point2D(0.79, 0.28));
+        kdTree05.insert(new Point2D(0.5, 0.88));
+        kdTree05.insert(new Point2D(0.51, 0.63));
+        kdTree05.insert(new Point2D(0.61, 0.6));
+        
+        final Point2D p044041 = new Point2D(0.44, 0.41);
+        final Point2D nearestTo044041 = kdTree05.nearest(p044041);
+        final Point2D expectedTo044041 = new Point2D(0.61, 0.42);
+
+        if (!nearestTo044041.equals(expectedTo044041)) {
+            throw new RuntimeException("Validation failed: returned (yellow) " + nearestTo044041 + " expected (green) "
+                    + expectedTo044041);
+        }
+
+    }
+
+    private static void runTest02NearestRandFixed() {
+        KdTree kdTree05 = new KdTree();
+        kdTree05.insert(new Point2D(0.75, 0.75));
+        kdTree05.insert(new Point2D(0.53, 0.88));
+        kdTree05.insert(new Point2D(0.4, 0.63));
+        kdTree05.insert(new Point2D(0.65, 0.08));
+        kdTree05.insert(new Point2D(0.32, 0.33));
+        kdTree05.insert(new Point2D(0.23, 0.26));
+        kdTree05.insert(new Point2D(0.91, 0.84));
+        kdTree05.insert(new Point2D(0.34, 0.19));
+        kdTree05.insert(new Point2D(0.61, 0.29));
+        kdTree05.insert(new Point2D(0.35, 0.16));
+        kdTree05.insert(new Point2D(0.48, 0.77));
+        kdTree05.insert(new Point2D(0.29, 0.16));
+        kdTree05.insert(new Point2D(0.91, 0.11));
+        kdTree05.insert(new Point2D(0.42, 0.9));
+        kdTree05.insert(new Point2D(0.21, 0.33));
+        kdTree05.insert(new Point2D(0.34, 0.19));
+        kdTree05.insert(new Point2D(0.1, 0.58));
+        kdTree05.insert(new Point2D(0.32, 0.48));
+        kdTree05.insert(new Point2D(0.43, 0.57));
+        kdTree05.insert(new Point2D(0.28, 0.89));
+        
+
+        // Validation failed for point: (0.28, 0.78) on trial 13. Tree: (0.4, 0.63); Set: (0.28, 0.89) . Tree distance = 0.19209372712298547; Set distance = 0.10999999999999999
+
+        final Point2D p028078 = new Point2D(0.28, 0.78);
+        final Point2D nearestTo028078 = kdTree05.nearest(p028078);
+        final Point2D expectedTo028078 = new Point2D(0.28, 0.89);
+        // kdTree05.contains(nearestTo028078, true);
+        // System.out.println("-----");
+        // kdTree05.contains(expectedTo028078, true);
+
+        boolean doDraw = false;
+        if (doDraw) {
+            kdTree05.draw();
+            StdDraw.setPenRadius(DRAW_POINT_SIZE * 2);
+            StdDraw.setPenColor(Color.YELLOW);
+            nearestTo028078.draw();
+            StdDraw.setPenColor(Color.GREEN);
+            expectedTo028078.draw();
+            StdDraw.setPenColor(Color.ORANGE);
+            p028078.draw();
+        }
+
+        if (!nearestTo028078.equals(expectedTo028078)) {
+            throw new RuntimeException("Validation failed: returned (yellow) " + nearestTo028078 + " expected (green) "
+                    + expectedTo028078);
+        }
+        
     }
 
     private static void runTest02Nearest() {
@@ -545,6 +719,37 @@ public class KdTree {
         final Point2D expectedTo88 = new Point2D(7, 7);
         if (!nearestTo88.equals(expectedTo88)) {
             throw new RuntimeException("Validation failed: returned " + nearestTo88 + " expected " + expectedTo88);
+        }
+
+        final Point2D nearestTo2222 = kdTree02.nearest(new Point2D(2.2, 2.2));
+        final Point2D expectedTo2222 = new Point2D(2, 2);
+        if (!nearestTo2222.equals(expectedTo2222)) {
+            throw new RuntimeException("Validation failed: returned " + nearestTo2222 + " expected " + expectedTo2222);
+        }
+
+        final Point2D nearestTo5601 = kdTree02.nearest(new Point2D(5, 6.01));
+        final Point2D expectedTo5601 = new Point2D(6, 6);
+        if (!nearestTo5601.equals(expectedTo5601)) {
+            throw new RuntimeException("Validation failed: returned " + nearestTo5601 + " expected " + expectedTo5601);
+        }
+
+        // ========================== Circle
+        KdTree kdTree03 = new KdTree();
+        kdTree03.insert(new Point2D(-3, 0));
+        kdTree03.insert(new Point2D(0, 3));
+        kdTree03.insert(new Point2D(0, -3));
+        kdTree03.insert(new Point2D(3, 0));
+
+        final Point2D nearestTo00001 = kdTree03.nearest(new Point2D(0.0, 0.001));
+        final Point2D expectedTo00001 = new Point2D(0, 3);
+        if (!nearestTo00001.equals(expectedTo00001)) {
+            throw new RuntimeException("Validation failed: returned " + nearestTo00001 + " expected " + expectedTo00001);
+        }
+
+        final Point2D nearestTo00010 = kdTree03.nearest(new Point2D(0.0001, 0));
+        final Point2D expectedTo00010 = new Point2D(3, 0);
+        if (!nearestTo00010.equals(expectedTo00010)) {
+            throw new RuntimeException("Validation failed: returned " + nearestTo00010 + " expected " + expectedTo00010);
         }
 
     }
@@ -602,7 +807,7 @@ public class KdTree {
             throw new RuntimeException("Validation failed");
         }
 
-        if (!(new Point(25, 25).equals(new Point(25, 25)))) {
+        if (!(new Point2D(25, 25).equals(new Point2D(25, 25)))) {
             throw new RuntimeException("Validation failed for Point");
         }
 
