@@ -41,7 +41,6 @@ public class KdTree {
             maxX = x;
         }
         if (x < minX) {
-            System.out.println("New min = " + x + " was " + minX);
             minX = x;
         }
         if (y > maxY) {
@@ -148,7 +147,8 @@ public class KdTree {
                 else {
                     currentNode = currentNode.right;
                 }
-            } else {
+            } 
+            else {
                 // compare by y
                 if (currentNode.point.equals(p)) {
                     return true;
@@ -303,8 +303,118 @@ public class KdTree {
 
     // a nearest neighbor in the set to point p; null if the set is empty
     public Point2D nearest(Point2D p) {
-        // TODO
-        return null;
+        if (rootNode == null) {
+            return null;
+        }
+        return nearest(rootNode, p, this.minX, this.maxX, this.minY, this.maxY);
+    }
+
+    private Point2D nearest(Node n, Point2D targetP, double xMin, double xMax, double yMin, double yMax) {
+        if (n == null) {
+            return null;
+        }
+        if (xMin > xMax) {
+            throw new RuntimeException("nearest x validation failed");
+        }
+        if (yMin > yMax) {
+            throw new RuntimeException("nearest y validation failed");
+        }
+        final double targetpX = targetP.x();
+        final double targetpY = targetP.y();
+        final Point2D p = n.point;
+        if (p.x() > xMax || p.x() < xMin) {
+            throw new RuntimeException(String.format(
+                    "Point coordiantes wrong for x(%s): supplied (min, max) = (%s, %s)", p.x(), xMin, xMax));
+        }
+        if (p.y() > yMax || p.y() < yMin) {
+            throw new RuntimeException("Point coordiantes wrong for y:");
+        }
+
+        Point2D smallestLeft = null;
+        Point2D smallestRight = null;
+        // System.out.println("Processing node: " + n);
+
+        if (n.red) {
+            // x compare
+            if (targetpX < p.x()) {
+                smallestLeft = nearest(n.left, targetP, xMin, p.x(), yMin, yMax);
+                // System.out.println(String.format(
+                // "About to create rect: %s, %s, %s, %s for node: %s ; boarders: (%s, %s, %s, %s)",
+                // p.x(), yMin,
+                // xMax, yMax, n, xMin, xMax, yMin, yMax));
+                RectHV rect = new RectHV(p.x(), yMin, xMax, yMax);
+                if (smallestLeft != null && rect.distanceTo(targetP) > smallestLeft.distanceTo(targetP)) {
+                    // no op
+                } 
+                else {
+                    smallestRight = nearest(n.right, targetP, p.x(), xMax, yMin, yMax);
+                }
+            } 
+            else {
+                smallestRight = nearest(n.right, targetP, p.x(), xMax, yMin, yMax);
+                RectHV rect = new RectHV(xMin, yMin, p.x(), yMax);
+                if (smallestRight != null && rect.distanceTo(targetP) > smallestRight.distanceTo(targetP)) {
+                    // no op
+                } 
+                else {
+                    smallestLeft = nearest(n.left, targetP, xMin, p.x(), yMin, yMax);
+                }
+                
+            }
+        } 
+        else {
+            // y compare
+            if (targetpY < p.y()) {
+                smallestLeft = nearest(n.left, targetP, xMin, xMax, yMin, p.y());
+                RectHV rect = new RectHV(xMin, p.y(), xMin, yMax);
+                if (smallestLeft != null && rect.distanceTo(targetP) > smallestLeft.distanceTo(targetP)) {
+                    // no op
+                } 
+                else {
+                    smallestRight = nearest(n.right, targetP, xMin, xMax, p.y(), yMax);
+                }
+            } 
+            else {
+                smallestRight = nearest(n.right, targetP, xMin, xMax, p.y(), yMax);
+                RectHV rect = new RectHV(xMin, yMin, xMin, p.y());
+                if (smallestRight != null && rect.distanceTo(targetP) > smallestRight.distanceTo(targetP)) {
+                    // no op
+                } else {
+                    smallestLeft = nearest(n.left, targetP, xMin, xMax, yMin, p.y());
+                }
+            }
+        }
+        Point2D minToTarget = identifyMinToTarget(targetP, n.point, smallestLeft, smallestRight);
+        if (minToTarget == null) {
+            throw new RuntimeException("Logic failure in minToTarget");
+        }
+        return minToTarget;
+    }
+
+    private Point2D identifyMinToTarget(Point2D target, Point2D point1, Point2D point2, Point2D point3) {
+        double p1d = Double.MAX_VALUE;
+        double p2d = Double.MAX_VALUE;
+        double p3d = Double.MAX_VALUE;
+        if (point1 != null) {
+            p1d = target.distanceTo(point1);
+        }
+        if (point2 != null) {
+            p2d = target.distanceTo(point2);
+        }
+        if (point3 != null) {
+            p3d = target.distanceTo(point3);
+        }
+
+        if (p1d < p2d && p1d < p3d) {
+            return point1;
+        }
+        if (p2d < p1d && p2d < p3d) {
+            return point2;
+        }
+        if (p3d < p1d && p3d < p2d) {
+            return point3;
+        }
+        return point1; // does not matter
     }
 
     private class Node {
@@ -411,7 +521,32 @@ public class KdTree {
     // unit testing of the methods (optional)
     public static void main(String[] args) {
         runTests01();
+        runTest02Nearest();
         System.out.println("Tests completed for KdTree");
+    }
+
+    private static void runTest02Nearest() {
+        KdTree kdTree02 = new KdTree();
+        kdTree02.insert(new Point2D(1, 1));
+        kdTree02.insert(new Point2D(2, 2));
+        kdTree02.insert(new Point2D(6, 6));
+        kdTree02.insert(new Point2D(3, 3));
+        kdTree02.insert(new Point2D(7, 7));
+        kdTree02.insert(new Point2D(4, 4));
+        kdTree02.insert(new Point2D(5, 5));
+
+        final Point2D nearestTo00 = kdTree02.nearest(new Point2D(0, 0));
+        final Point2D expectedTo00 = new Point2D(1, 1);
+        if (!nearestTo00.equals(expectedTo00)) {
+            throw new RuntimeException("Validation failed: returned " + nearestTo00 + " expected " + expectedTo00);
+        }
+
+        final Point2D nearestTo88 = kdTree02.nearest(new Point2D(8, 8));
+        final Point2D expectedTo88 = new Point2D(7, 7);
+        if (!nearestTo88.equals(expectedTo88)) {
+            throw new RuntimeException("Validation failed: returned " + nearestTo88 + " expected " + expectedTo88);
+        }
+
     }
 
     private static void runTests01() {
@@ -441,7 +576,7 @@ public class KdTree {
             throw new RuntimeException("Validation failed");
         }
 
-        kdTree01.draw();
+        // kdTree01.draw();
 
         ArrayList<Point2D> points01a = new ArrayList<Point2D>();
         for (Point2D p : kdTree01.range(new RectHV(-1, -1, 10, 10))) {
@@ -469,6 +604,24 @@ public class KdTree {
 
         if (!(new Point(25, 25).equals(new Point(25, 25)))) {
             throw new RuntimeException("Validation failed for Point");
+        }
+
+        final Point2D nearestTo11 = kdTree01.nearest(new Point2D(1, 1));
+        final Point2D expectedTo11 = new Point2D(0, 0);
+        if (!nearestTo11.equals(expectedTo11)) {
+            throw new RuntimeException("Validation failed: returned " + nearestTo11 + " expected " + expectedTo11);
+        }
+
+        final Point2D nearestTo95 = kdTree01.nearest(new Point2D(9, 0));
+        final Point2D expectedTo95 = new Point2D(5, 0);
+        if (!nearestTo95.equals(expectedTo95)) {
+            throw new RuntimeException("Validation failed: returned " + nearestTo95 + " expected " + expectedTo95);
+        }
+
+        final Point2D nearestToM13 = kdTree01.nearest(new Point2D(-1, 3));
+        final Point2D expectedToM13 = new Point2D(0, 5);
+        if (!nearestToM13.equals(expectedToM13)) {
+            throw new RuntimeException("Validation failed: returned " + nearestToM13 + " expected " + expectedToM13);
         }
 
     }

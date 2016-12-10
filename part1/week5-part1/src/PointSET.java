@@ -35,12 +35,7 @@ public class PointSET {
         if (p == null) {
             throw new NullPointerException();
         }
-        for (Point2D point : points) {
-            if (p.equals(point)) {
-                return true;
-            }
-        }
-        return false;
+        return points.contains(p);
     }
 
     // draw all points to standard draw
